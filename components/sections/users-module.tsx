@@ -1,237 +1,234 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import apiClient from '@/lib/api-client'
+import { toast } from "sonner"
+
+interface Role {
+  id: string
+  nombre: string
+}
 
 interface User {
   id: string
-  name: string
+  nombre: string
   email: string
-  role: "admin" | "supervisor" | "user"
-  permissions: string[]
-  status: "active" | "inactive"
+  roleId: string
+  role?: Role
+  isActive: boolean
 }
 
 export default function UsersModule() {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: "1",
-      name: "Juan García",
-      email: "juan@example.com",
-      role: "admin",
-      permissions: ["create", "read", "update", "delete"],
-      status: "active",
-    },
-    {
-      id: "2",
-      name: "María López",
-      email: "maria@example.com",
-      role: "supervisor",
-      permissions: ["create", "read", "update"],
-      status: "active",
-    },
-    {
-      id: "3",
-      name: "Carlos Ruiz",
-      email: "carlos@example.com",
-      role: "user",
-      permissions: ["read"],
-      status: "active",
-    },
-  ])
-
+  const [users, setUsers] = useState<User[]>([])
+  const [roles, setRoles] = useState<Role[]>([])
+  const [loading, setLoading] = useState(true)
+  
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [newUser, setNewUser] = useState({ name: "", email: "", role: "user" as const })
+  const [currentUser, setCurrentUser] = useState<Partial<User & { password?: string }>>({
+    nombre: "",
+    email: "",
+    roleId: "",
+    password: "",
+  })
 
-  const handleOpenModal = () => {
-    setEditingId(null)
-    setNewUser({ name: "", email: "", role: "user" })
-    setIsModalOpen(true)
+  // 1. CARGAR DATOS (Usuarios y Roles)
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [usersRes, rolesRes] = await Promise.all([
+        apiClient.get('/gestion/usuarios'),
+        apiClient.get('/gestion/roles')
+      ])
+      setUsers(usersRes.data)
+      setRoles(rolesRes.data)
+    } catch (error) {
+      console.error("Error al cargar datos:", error)
+      toast.error("Error al conectar con el servidor de usuarios")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  // 2. ELIMINAR USUARIO
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar este usuario?")) return
+    try {
+      await apiClient.delete(`/gestion/usuarios/${id}`)
+      toast.success("Usuario eliminado")
+      fetchData()
+    } catch (error) {
+      toast.error("No se pudo eliminar el usuario")
+    }
+  }
+
+  // 3. GUARDAR (CREAR O EDITAR)
+  const handleSaveUser = async () => {
+    try {
+      // Validaciones básicas
+      if (!currentUser.email || !currentUser.nombre || !currentUser.roleId) {
+        toast.error("Por favor rellena los campos obligatorios")
+        return
+      }
+
+      if (editingId) {
+        // PATCH: El password es opcional al editar
+        const updateData = { ...currentUser }
+        if (!updateData.password) delete updateData.password
+        
+        await apiClient.patch(`/gestion/usuarios/${editingId}`, updateData)
+        toast.success("Usuario actualizado")
+      } else {
+        // POST: El password es obligatorio al crear
+        if (!currentUser.password) {
+          toast.error("La contraseña es obligatoria para nuevos usuarios")
+          return
+        }
+        await apiClient.post('/gestion/usuarios', currentUser)
+        toast.success("Usuario creado con éxito")
+      }
+      
+      setIsModalOpen(false)
+      setEditingId(null)
+      fetchData()
+    } catch (error: any) {
+      const msg = error.response?.data?.message || "Error al guardar"
+      toast.error(typeof msg === 'string' ? msg : "Error de validación")
+    }
   }
 
   const handleEditUser = (user: User) => {
     setEditingId(user.id)
-    setNewUser({ name: user.name, email: user.email, role: user.role })
+    setCurrentUser({
+      nombre: user.nombre,
+      email: user.email,
+      roleId: user.roleId,
+      password: "", // No cargamos el password por seguridad
+    })
     setIsModalOpen(true)
   }
 
-  const handleSaveUser = () => {
-    if (newUser.name && newUser.email) {
-      if (editingId) {
-        // Edit existing user
-        setUsers(
-          users.map((u) =>
-            u.id === editingId
-              ? {
-                  ...u,
-                  name: newUser.name,
-                  email: newUser.email,
-                  role: newUser.role,
-                  permissions: newUser.role === "admin" ? ["create", "read", "update", "delete"] : ["read"],
-                }
-              : u,
-          ),
-        )
-      } else {
-        // Create new user
-        setUsers([
-          ...users,
-          {
-            id: Date.now().toString(),
-            ...newUser,
-            permissions: newUser.role === "admin" ? ["create", "read", "update", "delete"] : ["read"],
-            status: "active",
-          },
-        ])
-      }
-      setNewUser({ name: "", email: "", role: "user" })
-      setEditingId(null)
-      setIsModalOpen(false)
-    }
+  const handleAddUser = () => {
+    setEditingId(null)
+    setCurrentUser({ nombre: "", email: "", roleId: "", password: "" })
+    setIsModalOpen(true)
   }
 
-  const handleDeleteUser = (id: string) => {
-    setUsers(users.filter((u) => u.id !== id))
-  }
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "bg-red-500/20 text-red-400"
-      case "supervisor":
-        return "bg-blue-500/20 text-blue-400"
-      default:
-        return "bg-gray-500/20 text-gray-400"
-    }
-  }
+  if (loading) return <div className="p-8 text-center">Cargando panel de usuarios...</div>
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center bg-card p-6 rounded-xl border shadow-sm">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Gestión de Usuarios</h1>
-          <p className="text-muted-foreground">Administra usuarios, roles y permisos</p>
+          <h2 className="text-3xl font-bold tracking-tight text-primary">Usuarios del Sistema</h2>
+          <p className="text-muted-foreground">Gestiona los accesos y roles de tu personal</p>
         </div>
-        <Button onClick={handleOpenModal} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+        <Button onClick={handleAddUser} className="bg-primary text-white">
           + Nuevo Usuario
         </Button>
       </div>
 
-      {isModalOpen && (
-        <Card className="p-6 border-border/50 bg-card">
-          <h2 className="text-lg font-bold text-foreground mb-4">
-            {editingId ? "Editar Usuario" : "Crear Nuevo Usuario"}
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Nombre</label>
-              <Input
-                type="text"
-                value={newUser.name}
-                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                className="bg-background border-border text-foreground"
-                placeholder="Juan Pérez"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Email</label>
-              <Input
-                type="email"
-                value={newUser.email}
-                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                className="bg-background border-border text-foreground"
-                placeholder="juan@example.com"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Rol</label>
-              <select
-                value={newUser.role}
-                onChange={(e) => setNewUser({ ...newUser, role: e.target.value as any })}
-                className="w-full bg-background border border-border rounded-md px-3 py-2 text-foreground text-sm"
-              >
-                <option value="user">Usuario</option>
-                <option value="supervisor">Supervisor</option>
-                <option value="admin">Administrador</option>
-              </select>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                onClick={handleSaveUser}
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                {editingId ? "Guardar Cambios" : "Crear Usuario"}
-              </Button>
-              <Button
-                onClick={() => {
-                  setIsModalOpen(false)
-                  setEditingId(null)
-                }}
-                variant="outline"
-                className="flex-1 border-border hover:bg-secondary/20"
-              >
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {users.map((user) => (
-          <Card key={user.id} className="p-6 border-border/50">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">{user.name.charAt(0)}</span>
+          <Card key={user.id} className="p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="space-y-4">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    {user.nombre.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground">{user.name}</h3>
+                    <h4 className="font-bold">{user.nombre}</h4>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
                   </div>
                 </div>
+                <Badge variant={user.isActive !== false ? "default" : "secondary"}>
+                  {user.role?.nombre || "Sin Rol"}
+                </Badge>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="flex gap-2 mb-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleBadgeColor(user.role)}`}>
-                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                    </span>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        user.status === "active" ? "bg-green-500/20 text-green-400" : "bg-gray-500/20 text-gray-400"
-                      }`}
-                    >
-                      {user.status === "active" ? "Activo" : "Inactivo"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{user.permissions.length} permisos</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleEditUser(user)}
-                    variant="outline"
-                    className="border-primary/50 text-primary hover:bg-primary/10"
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    onClick={() => handleDeleteUser(user.id)}
-                    variant="outline"
-                    className="border-destructive/50 text-destructive hover:bg-destructive/10"
-                  >
-                    Eliminar
-                  </Button>
-                </div>
+              
+              <div className="flex gap-2 pt-2">
+                <Button onClick={() => handleEditUser(user)} variant="outline" className="flex-1">
+                  Editar
+                </Button>
+                <Button onClick={() => handleDeleteUser(user.id)} variant="outline" className="text-destructive hover:bg-destructive/10">
+                  Eliminar
+                </Button>
               </div>
             </div>
           </Card>
         ))}
       </div>
+
+      {/* MODAL DE USUARIO */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Editar Usuario" : "Crear Usuario"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Nombre Completo</Label>
+              <Input
+                value={currentUser.nombre}
+                onChange={(e) => setCurrentUser({ ...currentUser, nombre: e.target.value })}
+                placeholder="Ej: Juan Pérez"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={currentUser.email}
+                onChange={(e) => setCurrentUser({ ...currentUser, email: e.target.value })}
+                placeholder="juan@pizzeria.com"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Rol en el Sistema</Label>
+              <Select
+                value={currentUser.roleId}
+                onValueChange={(val) => setCurrentUser({ ...currentUser, roleId: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Contraseña {editingId && "(dejar en blanco para no cambiar)"}</Label>
+              <Input
+                type="password"
+                value={currentUser.password}
+                onChange={(e) => setCurrentUser({ ...currentUser, password: e.target.value })}
+                placeholder="********"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveUser}>Guardar Cambios</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
