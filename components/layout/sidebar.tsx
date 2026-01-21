@@ -29,7 +29,7 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
       label: "Usuarios",
       icon: Users,
       submenu: [
-        { id: "users-list", label: "Usuarios" },
+        { id: "users", label: "Usuarios" },
         { id: "roles", label: "Roles" },
         { id: "permissions", label: "Permisos" },
       ],
