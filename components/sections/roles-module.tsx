@@ -11,7 +11,6 @@ import apiClient from '@/lib/api-client'
 import { toast } from "sonner"
 import { Settings2, ShieldCheck } from "lucide-react"
 
-// Interfaces para eliminar los errores de tipo "never"
 interface Permiso {
   id: string
   name: string
@@ -20,7 +19,7 @@ interface Permiso {
 
 interface Role {
   id: string
-  name: string // Debe coincidir con el backend
+  name: string
   permisos: Permiso[]
 }
 
@@ -31,9 +30,10 @@ export default function RolesModule() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   
+  // ✅ ADAPTACIÓN: Cambiado 'permisosIds' a 'permisoIds' para que el DTO lo acepte
   const [currentRole, setCurrentRole] = useState({
     name: "",
-    permisosIds: [] as string[]
+    permisoIds: [] as string[] 
   })
 
   const fetchData = async () => {
@@ -46,7 +46,7 @@ export default function RolesModule() {
       setRoles(rRes.data || [])
       setPermisos(pRes.data || [])
     } catch (error) {
-      toast.error("Error al cargar roles y permisos de la VPS")
+      toast.error("Error al cargar datos de la VPS")
     } finally { 
       setLoading(false) 
     }
@@ -57,9 +57,10 @@ export default function RolesModule() {
   const handleTogglePermiso = (id: string) => {
     setCurrentRole(prev => ({
       ...prev,
-      permisosIds: prev.permisosIds.includes(id) 
-        ? prev.permisosIds.filter(pId => pId !== id)
-        : [...prev.permisosIds, id]
+      // ✅ Usamos 'permisoIds'
+      permisoIds: prev.permisoIds.includes(id) 
+        ? prev.permisoIds.filter(pId => pId !== id)
+        : [...prev.permisoIds, id]
     }))
   }
 
@@ -72,57 +73,57 @@ export default function RolesModule() {
 
       if (editingId) {
         await apiClient.patch(`/gestion/roles/${editingId}`, currentRole)
-        toast.success("Rol actualizado con éxito")
+        toast.success("Rol actualizado")
       } else {
-        // Enviamos el objeto con 'name' y 'permisosIds'
+        // ✅ Ahora enviamos { name, permisoIds }, que es lo que pide tu DTO
         await apiClient.post('/gestion/roles', currentRole)
         toast.success("Rol creado con éxito")
       }
       
       setIsModalOpen(false)
-      fetchData() // Recargar lista
+      fetchData()
     } catch (error: any) {
-      console.error("Error al guardar:", error.response?.data || error.message)
-      const serverMsg = error.response?.data?.message
-      toast.error(Array.isArray(serverMsg) ? serverMsg[0] : "Fallo al guardar el rol")
+      console.error("Error enviado al server:", currentRole)
+      console.error("Respuesta error:", error.response?.data)
+      toast.error("Fallo al guardar: revisa la consola para ver el error del DTO")
     }
   }
 
-  if (loading) return <div className="p-10 text-center animate-pulse text-primary font-bold">Sincronizando con VPS...</div>
+  if (loading) return <div className="p-10 text-center animate-pulse font-bold">Conectando...</div>
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-card p-6 rounded-xl border shadow-sm">
         <div>
           <h2 className="text-3xl font-bold text-primary flex items-center gap-2">
-            <ShieldCheck size={32}/> Seguridad de Acceso
+            <ShieldCheck size={32}/> Roles y Seguridad
           </h2>
-          <p className="text-muted-foreground">Define los roles de trabajo y sus permisos</p>
+          <p className="text-muted-foreground">Configura los permisos por cada puesto</p>
         </div>
         <Button onClick={() => { 
           setEditingId(null); 
-          setCurrentRole({ name: "", permisosIds: [] }); 
+          setCurrentRole({ name: "", permisoIds: [] }); 
           setIsModalOpen(true); 
-        }} className="bg-primary text-white">
+        }}>
           + Nuevo Rol
         </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {roles.map((role) => (
-          <Card key={role.id} className="p-5 border-t-4 border-t-primary hover:shadow-lg transition-all">
+          <Card key={role.id} className="p-5 border-t-4 border-t-primary hover:shadow-md transition-all">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h4 className="text-xl font-extrabold">{role.name}</h4>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
-                  {role.permisos?.length || 0} permisos asignados
+                <h4 className="text-xl font-bold">{role.name}</h4>
+                <p className="text-[10px] text-muted-foreground font-bold">
+                  {role.permisos?.length || 0} PERMISOS
                 </p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => {
                 setEditingId(role.id);
                 setCurrentRole({ 
                   name: role.name, 
-                  permisosIds: role.permisos?.map((p) => p.id) || []
+                  permisoIds: role.permisos?.map((p) => p.id) || []
                 });
                 setIsModalOpen(true);
               }} className="text-primary"><Settings2 size={18} /></Button>
@@ -133,54 +134,50 @@ export default function RolesModule() {
                   {p.name}
                 </span>
               ))}
-              {(!role.permisos || role.permisos.length === 0) && (
-                <span className="text-[10px] text-muted-foreground italic">Sin permisos asignados</span>
-              )}
             </div>
           </Card>
         ))}
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl bg-card">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">
-              {editingId ? "Editar Rol" : "Nuevo Rol de Sistema"}
+              {editingId ? "Ajustar Rol" : "Nuevo Rol"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="grid gap-2">
-              <Label className="font-bold text-primary">Nombre del Rol</Label>
+              <Label className="font-bold">Nombre del Rol</Label>
               <Input 
                 value={currentRole.name} 
                 onChange={e => setCurrentRole({...currentRole, name: e.target.value})} 
-                placeholder="Ej: Administrador, Chef, Camarero..." 
-                className="text-lg py-6"
+                placeholder="Ej: Administrador, Cocina..." 
               />
             </div>
             
             <div>
-              <Label className="font-bold text-primary mb-3 block">Vincular Permisos</Label>
+              <Label className="font-bold mb-3 block">Seleccionar Permisos</Label>
               <div className="grid grid-cols-2 gap-3 p-4 bg-muted/30 rounded-xl border max-h-72 overflow-y-auto">
                 {permisos.map((p) => (
-                  <div key={p.id} className="flex items-center space-x-3 bg-card p-3 rounded-lg border shadow-sm hover:border-primary/50 transition-colors">
+                  <div key={p.id} className="flex items-center space-x-3 bg-card p-3 rounded-lg border shadow-sm">
                     <Checkbox 
                       id={`perm-${p.id}`} 
-                      checked={currentRole.permisosIds.includes(p.id)}
+                      checked={currentRole.permisoIds.includes(p.id)}
                       onCheckedChange={() => handleTogglePermiso(p.id)}
                     />
                     <label htmlFor={`perm-${p.id}`} className="text-sm font-semibold cursor-pointer flex-1">
                       {p.name}
-                      <p className="text-[9px] text-muted-foreground font-mono mt-1">{p.slug}</p>
+                      <p className="text-[9px] text-muted-foreground mt-1">{p.slug}</p>
                     </label>
                   </div>
                 ))}
               </div>
             </div>
           </div>
-          <DialogFooter className="gap-3">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} className="bg-primary text-white px-8">Guardar</Button>
+            <Button onClick={handleSave} className="bg-primary text-white">Guardar Rol</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

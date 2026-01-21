@@ -4,7 +4,7 @@ import { useState } from "react"
 import Sidebar from "./sidebar"
 import TopBar from "./top-bar"
 import Dashboard from "@/components/sections/dashboard"
-import UsersListModule from "@/components/sections/users-list-module"
+import UsersModule from "@/components/sections/users-module"
 import RolesModule from "@/components/sections/roles-module"
 import PermissionsModule from "@/components/sections/permissions-module"
 import TablesModule from "@/components/sections/tables-module"
@@ -15,15 +15,15 @@ interface DashboardLayoutProps {
   onLogout: () => void
 }
 
-type ActiveSection = "dashboard" | "users-list" | "roles" | "permissions" | "tables" | "products-list" | "categories"
+type ActiveSection = "dashboard" | "users" | "roles" | "permissions" | "tables" | "products-list" | "categories"
 
 export default function DashboardLayout({ onLogout }: DashboardLayoutProps) {
   const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard")
 
   const renderContent = () => {
     switch (activeSection) {
-      case "users-list":
-        return <UsersListModule />
+      case "users":
+        return <UsersModule />
       case "roles":
         return <RolesModule />
       case "permissions":
