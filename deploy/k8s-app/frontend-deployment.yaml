@@ -14,13 +14,13 @@ spec:
       labels:
         app: admin-panel-frontend
     spec:
-      # --- ESTO ES LO QUE SOLUCIONA EL IMAGEPULLBACKOFF ---
+      # Esto permite entrar a tu Docker Hub privado
       imagePullSecrets:
       - name: admin-panel-registry-secret
-      # ---------------------------------------------------
       containers:
       - name: frontend
-        image: sergiogg06/admin-panel-frontend:latest
+        # CAMBIO AQUÍ: Ya no dice "tu-usuario", ahora dice "sergiogg06"
+        image: sergiogg06/admin-panel-frontend:latest 
         ports:
         - containerPort: 3033
         resources:
