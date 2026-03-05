@@ -5,7 +5,7 @@ metadata:
   labels:
     app: admin-panel-frontend
 spec:
-  replicas: 2 # Número de instancias a ejecutar
+  replicas: 2
   selector:
     matchLabels:
       app: admin-panel-frontend
@@ -14,12 +14,15 @@ spec:
       labels:
         app: admin-panel-frontend
     spec:
+      # --- ESTO ES LO QUE SOLUCIONA EL IMAGEPULLBACKOFF ---
+      imagePullSecrets:
+      - name: admin-panel-registry-secret
+      # ---------------------------------------------------
       containers:
       - name: frontend
-        # Esta imagen será actualizada automáticamente por Jenkins
-        image: tu-usuario/admin-panel-frontend:latest 
+        image: sergiogg06/admin-panel-frontend:latest
         ports:
-        - containerPort: 3033 # Puerto definido en el Dockerfile
+        - containerPort: 3033
         resources:
           limits:
             cpu: "500m"
