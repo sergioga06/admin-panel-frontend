@@ -15,22 +15,20 @@ spec:
     }
 
     environment {
-        // Ajusta tu usuario de Docker Hub y el nombre de la imagen aquí
         DOCKER_IMAGE = "sergiogg06/admin-panel-frontend" 
         DOCKER_TAG = "${env.BUILD_NUMBER}"
-        // Usamos el ID de tu portfolio que ya sabemos que funciona
-        REGISTRY_CREDENTIALS_ID = 'docker-hub-credentials' 
+        // AQUÍ COLOCAS TU ID ESPECÍFICO
+        REGISTRY_CREDENTIALS_ID = 'dc346772-1eb6-498e-820f-e8b7b5e1cd83' 
     }
 
     stages {
         stage('Build & Push Image') {
             steps {
                 container('docker') {
-                    // Usamos el ID 'docker-hub-credentials' que tienes en tu portfolio
+                    // El pipeline buscará ahora tu credencial personal
                     withCredentials([usernamePassword(credentialsId: "${env.REGISTRY_CREDENTIALS_ID}", usernameVariable: 'DUSER', passwordVariable: 'DPASS')]) {
                         sh "echo \$DPASS | docker login -u \$DUSER --password-stdin"
                         
-                        // Construimos la imagen (el Dockerfile ya debe estar configurado para npm y puerto 3033)
                         sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
                         sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
                         
