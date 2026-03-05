@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-panel-frontend
+  labels:
+    app: admin-panel-frontend
+spec:
+  replicas: 2 # Número de instancias a ejecutar
+  selector:
+    matchLabels:
+      app: admin-panel-frontend
+  template:
+    metadata:
+      labels:
+        app: admin-panel-frontend
+    spec:
+      containers:
+      - name: frontend
+        # Esta imagen será actualizada automáticamente por Jenkins
+        image: tu-usuario/admin-panel-frontend:latest 
+        ports:
+        - containerPort: 3033 # Puerto definido en el Dockerfile
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"

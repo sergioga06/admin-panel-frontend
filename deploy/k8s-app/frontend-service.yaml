@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-panel-frontend-service
+spec:
+  selector:
+    app: admin-panel-frontend
+  ports:
+    - protocol: TCP
+      port: 80        # Puerto por el que se accederá al servicio
+      targetPort: 3033 # Puerto interno del contenedor Next.js
+  type: ClusterIP # Usa NodePort si quieres acceder directamente por IP de la VPS
