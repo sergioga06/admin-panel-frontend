@@ -11,4 +11,4 @@ spec:
       targetPort: 3033
       # Puedes elegir un puerto fijo entre 30000-32767
       nodePort: 32033 
-  type: NodePort # <--- CAMBIA ESTO
+  type: NodePort # <--- CAMBIA ESTO esto
