@@ -7,6 +7,8 @@ spec:
     app: admin-panel-frontend
   ports:
     - protocol: TCP
-      port: 80        # Puerto por el que se accederá al servicio
-      targetPort: 3033 # Puerto interno del contenedor Next.js
-  type: ClusterIP # Usa NodePort si quieres acceder directamente por IP de la VPS
+      port: 80
+      targetPort: 3033
+      # Puedes elegir un puerto fijo entre 30000-32767
+      nodePort: 32033 
+  type: NodePort # <--- CAMBIA ESTO
