@@ -43,22 +43,24 @@ spec:
 
         stage('Update GitOps Manifests') {
             steps {
-                // Utilizamos tu ID de GitHub para clonar y actualizar
+                // Clonamos el repo (esto funciona bien)
                 git branch: 'main', credentialsId: "${env.GIT_CREDENTIALS_ID}", url: 'https://github.com/sergioga06/admin-panel-frontend.git'
                 
                 script {
-                    // Actualizamos el tag de la imagen en el manifiesto de K8s
+                    // 1. Intentamos actualizar el tag
                     sh "sed -i 's|image: ${DOCKER_IMAGE}:.*|image: ${DOCKER_IMAGE}:${env.BUILD_NUMBER}|g' deploy/k8s-app/frontend-deployment.yaml"
                     
                     sh "git config user.email 'jenkins@vps.com'"
                     sh "git config user.name 'Jenkins CI'"
                     sh "git add deploy/k8s-app/frontend-deployment.yaml"
                     
-                    // El '|| true' evita que el pipeline falle si no hay cambios reales que guardar
+                    // 2. Commit (con protección si no hay cambios)
                     sh "git commit -m 'Update admin-panel image to version ${env.BUILD_NUMBER}' || echo 'Sin cambios nuevos'"
                     
-                    // Empujamos los cambios de vuelta a GitHub para que Argo CD los vea
-                    sh "git push origin main"
+                    // 3. LA SOLUCIÓN AL ERROR 128: Inyectar credenciales en la URL de push
+                    withCredentials([usernamePassword(credentialsId: "${env.GIT_CREDENTIALS_ID}", usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                        sh "git push https://${GIT_USER}:${GIT_TOKEN}@github.com/sergioga06/admin-panel-frontend.git main"
+                    }
                 }
             }
         }
