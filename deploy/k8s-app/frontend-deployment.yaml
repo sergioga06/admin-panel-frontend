@@ -20,7 +20,7 @@ spec:
       containers:
       - name: frontend
         # CAMBIO AQUÍ: Ya no dice "tu-usuario", ahora dice "sergiogg06"
-        image: sergiogg06/admin-panel-frontend:104
+        image: sergiogg06/admin-panel-frontend:105
         ports:
         - containerPort: 3033
         resources:
