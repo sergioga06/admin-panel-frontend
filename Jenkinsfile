@@ -55,7 +55,7 @@ spec:
                     sh "git add deploy/k8s-app/frontend-deployment.yaml"
                     
                     // 2. Commit (con protección si no hay cambios)
-                    sh "git commit -m 'Update admin-panel image to version ${env.BUILD_NUMBER}' || echo 'Sin cambios nuevos'"
+                    sh "git commit -m 'Update admin-panel image to version ${env.BUILD_NUMBER} [ci skip]' || echo 'Sin cambios nuevos'"
                     
                     // 3. LA SOLUCIÓN AL ERROR 128: Inyectar credenciales en la URL de push
                     withCredentials([usernamePassword(credentialsId: "${env.GIT_CREDENTIALS_ID}", usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
