@@ -37,7 +37,7 @@ export default function RootLayout({
     <html lang="es" className="dark">
       <body className={`${geist.className} font-sans antialiased bg-background text-foreground`}>
         {children}
-        <Analytics />
+        
       </body>
     </html>
   )
